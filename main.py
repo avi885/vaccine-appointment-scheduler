@@ -9,10 +9,9 @@ class SlackAgentClient(object):
     """
     Class to post messages to slack
     """
-    def webhook_post(self, message):
+    def webhook_post(self, district, message):
         url = os.getenv('SLACK_WEBHOOK_URL')
-        text = f"*[Vaccine Slot Alert]*\n*Message:*\n ```{message}```"
-
+        text = f"*[Vaccine Slot Alert][{district}]*\n```{message}```"
         payload = {
             "text": text
         }
@@ -25,15 +24,8 @@ class VaccineSlotFinder:
     DATE_FORMAT = '%d-%m-%Y'
 
     PIN_WHITELIST = ['245304']
-    DISTRICT_WHITELIST = ['651','676', '656', '650']
-    # Ghaziabad, Meerut, Hapur, Noida
 
-    DISTRICT_MAP = {
-        '651' : 'Ghaziabad',
-        '676' : 'Meerut',
-        '656' : 'Hapur',
-        '650' : 'Noida'
-    }
+    DISTRICT_MAP = json.loads(os.getenv('DISTRICT_MAP'))
 
     DAY_COUNT = 90
 
@@ -49,22 +41,31 @@ class VaccineSlotFinder:
                 if session["min_age_limit"] == self.AGE_LIMIT and session["available_capacity"] > 0:
                     center_found = True
                     self.found = True
-                    print(session["date"], session["available_capacity"], session["vaccine"], center["name"],
-                          center["block_name"], center["district_name"])
-                    SlackAgentClient().webhook_post(
-                        f"""{session["date"]}, {session["available_capacity"]}, {session["vaccine"]}, {center["name"]},{
-                        center["block_name"]}, {center["district_name"]}""")
+
+                    timings = ", ".join(session["slots"])
+                    message = f"""
+                    Date: {session["date"]}
+                    No. of Slots: {session["available_capacity"]}
+                    Timings: {timings}
+                    Vaccine: {session["vaccine"]}
+                    Center Name:    {center["name"]}    
+                    Block:  {center["block_name"]}
+                    District: {center["district_name"]}
+                    Charges: {center["fee_type"]}
+                    Pincode: {center["pincode"]}
+                    """
+                    SlackAgentClient().webhook_post(center["district_name"], message)
 
         if not center_found:
             print("Not found")
             # SlackAgentClient().webhook_post(f"""Not found for {string}""")
 
     def controller(self):
-        for district in self.DISTRICT_WHITELIST:
+        for district in self.DISTRICT_MAP.keys():
             date = None
             for week in range(int(self.DAY_COUNT/7)):
                 date = self._get_next_date(date)
-                print(f"Checking for district {district} on date {date}")
+                print(f"Checking for district {self.DISTRICT_MAP[district]} on date {date}")
                 self.find_by_district(district, date)
 
             if not self.found:
@@ -137,4 +138,9 @@ class VaccineSlotFinder:
 
 # AWS Lambda invoker
 def lambda_handler(event, context):
+    VaccineSlotFinder().controller()
+
+# For local testing
+if __name__ == "__main__":
+    print("here")
     VaccineSlotFinder().controller()
