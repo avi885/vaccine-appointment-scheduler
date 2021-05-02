@@ -3,13 +3,14 @@ import requests
 import csv
 import datetime
 import json
+import os
 
 class SlackAgentClient(object):
     """
     Class to post messages to slack
     """
     def webhook_post(self, message):
-        url = "https://hooks.slack.com/services/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"
+        url = os.getenv('SLACK_WEBHOOK_URL')
         text = f"*[Vaccine Slot Alert]*\n*Message:*\n ```{message}```"
 
         payload = {
@@ -137,5 +138,3 @@ class VaccineSlotFinder:
 # AWS Lambda invoker
 def lambda_handler(event, context):
     VaccineSlotFinder().controller()
-
-
