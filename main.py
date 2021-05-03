@@ -68,8 +68,8 @@ class VaccineSlotFinder:
                 print(f"Checking for district {self.DISTRICT_MAP[district]} on date {date}")
                 self.find_by_district(district, date)
 
-            if not self.found:
-                SlackAgentClient().webhook_post(self.DISTRICT_MAP[district], "Slots not available")
+            # if not self.found:
+            #     SlackAgentClient().webhook_post(self.DISTRICT_MAP[district], "Slots not available")
 
     def find_by_pincode(self, pincode, date):
         path = "/appointment/sessions/public/calendarByPin"
